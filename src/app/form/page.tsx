@@ -51,23 +51,14 @@ export default function FormPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white text-gray-900 min-h-screen">
+    <div className="max-w-3xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-4">GRC Framework Recommender</h1>
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Sector */}
-        <div>
-          <label className="font-semibold">Business Sector:</label>
-          {sectors.map(s => (
-            <label key={s} className="block">
-              <input
-                type="checkbox"
-                onChange={() => handleCheckbox('sector', s)}
-                checked={formData.sector.includes(s)}
-              /> {s}
-            </label>
-          ))}
-        </div>
-
+        <select name="sector" value={formData.sector} onChange={handleChange} className="w-full p-2 border">
+          <option value="">Select Sector</option>
+          {sectors.map(s => <option key={s} value={s}>{s}</option>)}
+        </select>
 
         {/* Locations */}
         <div>
@@ -112,18 +103,10 @@ export default function FormPage() {
         </div>
 
         {/* Infra */}
-        <div>
-          <label className="font-semibold">Infrastructure:</label>
-          {infraOptions.map(i => (
-            <label key={i} className="block">
-              <input
-                type="checkbox"
-                onChange={() => handleCheckbox('infra', i)}
-                checked={formData.infra.includes(i)}
-              /> {i}
-            </label>
-          ))}
-        </div>
+        <select name="infra" value={formData.infra} onChange={handleChange} className="w-full p-2 border">
+          <option value="">Select Infrastructure</option>
+          {infraOptions.map(i => <option key={i} value={i}>{i}</option>)}
+        </select>
 
         {/* Customer Type */}
         <select name="customerType" value={formData.customerType} onChange={handleChange} className="w-full p-2 border">
