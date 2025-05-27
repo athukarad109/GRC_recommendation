@@ -13,11 +13,13 @@ const revenues = ['< $1M', '$1–10M', '$10–25M', '$25M+'];
 
 export default function FormPage() {
   const [formData, setFormData] = useState({
-    sector: '',
+    name: '',
+    email: '',
+    sector: [] as string[],
     locations: [] as string[],
     customerLocations: [] as string[],
     dataTypes: [] as string[],
-    infra: '',
+    infra: [] as string[],
     customerType: '',
     orgSize: '',
     revenue: '',
@@ -42,13 +44,37 @@ export default function FormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const res = await fetch('/api/recommend', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-    const data = await res.json();
-    setResult(data);
+    try {
+      // First, get recommendations
+      const recResponse = await fetch('/api/recommend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+      const recommendations = await recResponse.json();
+      
+      // Then, save user data and recommendations
+      const signupResponse = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          recommendations
+        }),
+      });
+      
+      if (signupResponse.ok) {
+        // Redirect to recommendations page
+        window.location.href = '/recommendations';
+      } else {
+        const error = await signupResponse.json();
+        console.error('Signup failed:', error);
+        alert('Signup failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error during signup:', error);
+      alert('An error occurred. Please try again.');
+    }
   };
 
   return (
@@ -70,6 +96,34 @@ export default function FormPage() {
           <h1 className="text-3xl font-bold mb-6 text-center">GRC Framework Recommender</h1>
           
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Organization Name */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="font-semibold block mb-2">Organization Name:</label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                placeholder="Enter your organization name"
+                required
+              />
+            </div>
+
+            {/* Email */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="font-semibold block mb-2">Email:</label>
+              <input
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                placeholder="Enter your email address"
+                required
+              />
+            </div>
+
             {/* Sector */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <label className="font-semibold block mb-2">Business Sector:</label>
@@ -205,7 +259,7 @@ export default function FormPage() {
             </div>
 
             <button type="submit" className="w-full bg-blue-600 text-white px-6 py-3 rounded hover:bg-blue-700 transition">
-              Get Recommendations
+              Sign Up
             </button>
           </form>
 
