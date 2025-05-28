@@ -25,29 +25,61 @@ export function verifyToken(token: string): any {
   }
 }
 
-export function setAuthCookie(token: string) {
-  cookies().set({
+export async function setAuthCookie(token: string) {
+  const cookieStore = cookies();
+  (await cookieStore).set({
     name: 'auth_token',
     value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     maxAge: 60 * 60 * 24 * 7, // 1 week
     path: '/',
+    sameSite: 'lax',
   });
 }
 
-export function getAuthCookie() {
-  return cookies().get('auth_token')?.value;
+export async function getAuthCookie() {
+  const cookieStore = await cookies();
+  return cookieStore.get('auth_token')?.value;
 }
 
-export function removeAuthCookie() {
-  cookies().delete('auth_token');
+export async function removeAuthCookie() {
+  const cookieStore = await cookies();
+  cookieStore.delete('auth_token');
 }
 
-export function getCurrentUser() {
-  const token = getAuthCookie();
-  if (!token) return null;
+export async function getCurrentUser() {
+  const token = (await cookies()).get('auth_token')?.value;
   
-  const decoded = verifyToken(token);
-  return decoded;
+  if (!token) {
+    console.log('No auth token found in cookies');
+    return null;
+  }
+  
+  try {
+    const decoded = verifyToken(token);
+    if (!decoded) {
+      console.log('Token verification failed');
+      return null;
+    }
+    return decoded;
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    return null;
+  }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

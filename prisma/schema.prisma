@@ -1,0 +1,44 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Organization {
+  id                  Int             @id @default(autoincrement())
+  name                String
+  email               String          @unique
+  password            String
+  sector              Json?
+  locations           Json?
+  customerLocations   Json?           @map("customer_locations")
+  dataTypes           Json?           @map("data_types")
+  infrastructure      Json?
+  customerType        String?         @map("customer_type")
+  orgSize             String?         @map("org_size")
+  revenue             String?
+  resetToken          String?         @map("reset_token")
+  resetTokenExpires   DateTime?       @map("reset_token_expires")
+  createdAt           DateTime        @default(now()) @map("created_at")
+  recommendations     Recommendation[]
+
+  @@map("organizations")
+}
+
+model Recommendation {
+  id                    Int           @id @default(autoincrement())
+  orgId                 Int           @map("org_id")
+  requiredFrameworks    Json          @map("required_frameworks")
+  recommendedFrameworks Json          @map("recommended_frameworks")
+  createdAt             DateTime      @default(now()) @map("created_at")
+  organization          Organization  @relation(fields: [orgId], references: [id], onDelete: Cascade)
+
+  @@index([orgId], name: "idx_recommendations_org_id")
+  @@map("recommendations")
+}

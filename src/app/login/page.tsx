@@ -26,6 +26,7 @@ export default function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
+        credentials: 'include' // Important for cookies
       });
       
       const data = await response.json();
@@ -35,8 +36,10 @@ export default function LoginPage() {
         return;
       }
       
-      // Redirect to recommendations page
-      router.push('/recommendations');
+      console.log('Login successful, redirecting to recommendations');
+      
+      // Use window.location for a full page refresh to ensure cookie is applied
+      window.location.href = '/recommendations';
     } catch (error) {
       console.error('Error during login:', error);
       setError('An error occurred. Please try again.');
@@ -107,3 +110,4 @@ export default function LoginPage() {
     </main>
   );
 }
+

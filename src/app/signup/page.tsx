@@ -15,6 +15,7 @@ export default function FormPage() {
   const [formData, setFormData] = useState({
     name: '',
     email: '',
+    password: '',
     sector: [] as string[],
     locations: [] as string[],
     customerLocations: [] as string[],
@@ -63,13 +64,14 @@ export default function FormPage() {
         }),
       });
       
+      const result = await signupResponse.json();
+      
       if (signupResponse.ok) {
         // Redirect to recommendations page
         window.location.href = '/recommendations';
       } else {
-        const error = await signupResponse.json();
-        console.error('Signup failed:', error);
-        alert('Signup failed. Please try again.');
+        console.error('Signup failed:', result.error);
+        alert('Signup failed: ' + (result.error || 'Please try again.'));
       }
     } catch (error) {
       console.error('Error during signup:', error);
@@ -120,6 +122,20 @@ export default function FormPage() {
                 onChange={handleChange}
                 className="w-full p-2 border rounded"
                 placeholder="Enter your email address"
+                required
+              />
+            </div>
+
+            {/* Password */}
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <label className="font-semibold block mb-2">Password:</label>
+              <input
+                type="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full p-2 border rounded"
+                placeholder="Create a password"
                 required
               />
             </div>
