@@ -31,9 +31,14 @@ export async function POST(req: Request) {
       });
       
       // Set auth cookie
-      setAuthCookie(token);
-      
-      return NextResponse.json({ success: true, orgId: organization.id });
+      await setAuthCookie(token);
+
+      // Include the token in the response for debugging
+      return NextResponse.json({ 
+        success: true, 
+        orgId: organization.id,
+        token: token // This helps with debugging
+      });
     } catch (error) {
       console.error('Database error:', error);
       return NextResponse.json({ error: 'Database error' }, { status: 500 });
@@ -43,4 +48,6 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
+
 

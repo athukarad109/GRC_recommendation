@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 
-const sectors = ['Healthcare', 'Fintech', 'SaaS', 'EdTech', 'Gov Vendor', 'E-commerce'];
+const sectors = ['Healthcare', 'Fintech', 'SaaS', 'EdTech', 'Gov Vendor', 'E-commerce', 'Other'];
 const locations = ['USA', 'EU', 'India', 'UK', 'Maryland', 'California'];
 const dataTypes = ['PII', 'PHI', 'Payment Data', 'Children\'s Data', 'Biometric', 'Financial'];
 const infraOptions = ['AWS', 'Azure', 'GCP', 'On-prem', 'Hybrid'];
@@ -17,6 +17,7 @@ export default function FormPage() {
     email: '',
     password: '',
     sector: [] as string[],
+    otherSector: '',
     locations: [] as string[],
     customerLocations: [] as string[],
     dataTypes: [] as string[],
@@ -39,6 +40,12 @@ export default function FormPage() {
       const updated = current.includes(value)
         ? current.filter(v => v !== value)
         : [...current, value];
+      
+      // If "Other" is unchecked, clear the otherSector value
+      if (name === 'sector' && value === 'Other' && !updated.includes('Other')) {
+        return { ...prev, [name]: updated, otherSector: '' };
+      }
+      
       return { ...prev, [name]: updated };
     });
   };
@@ -46,11 +53,19 @@ export default function FormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      // Prepare sector data
+      const sectorData = formData.sector.includes('Other') && formData.otherSector
+        ? [...formData.sector.filter(s => s !== 'Other'), formData.otherSector]
+        : formData.sector;
+
       // First, get recommendations
       const recResponse = await fetch('/api/recommend', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          sector: sectorData
+        }),
       });
       const recommendations = await recResponse.json();
       
@@ -60,6 +75,7 @@ export default function FormPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...formData,
+          sector: sectorData,
           recommendations
         }),
       });
@@ -67,8 +83,8 @@ export default function FormPage() {
       const result = await signupResponse.json();
       
       if (signupResponse.ok) {
-        // Redirect to recommendations page
-        window.location.href = '/recommendations';
+        // Redirect to home page
+        window.location.href = '/';
       } else {
         console.error('Signup failed:', result.error);
         alert('Signup failed: ' + (result.error || 'Please try again.'));
@@ -155,8 +171,21 @@ export default function FormPage() {
                   </label>
                 ))}
               </div>
+              {formData.sector.includes('Other') && (
+                <div className="mt-4">
+                  <label className="font-semibold block mb-2">Specify Other Sector:</label>
+                  <input
+                    type="text"
+                    name="otherSector"
+                    value={formData.otherSector}
+                    onChange={handleChange}
+                    className="w-full p-2 border rounded"
+                    placeholder="Enter your sector"
+                    required
+                  />
+                </div>
+              )}
             </div>
-
 
             {/* Locations */}
             <div className="bg-gray-50 p-4 rounded-lg">

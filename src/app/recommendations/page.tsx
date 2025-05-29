@@ -46,8 +46,24 @@ export default function RecommendationsPage() {
 
   const handleLogout = async () => {
     try {
-      await fetch('/api/logout', { method: 'POST' });
-      router.push('/');
+      // Clear state first
+      setRecommendations(null);
+      setError('');
+      setLoading(false);
+
+      // Then make the logout request
+      const response = await fetch('/api/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        // Force a hard refresh of the page
+        router.refresh();
+        router.push('/');
+      } else {
+        console.error('Logout failed:', await response.text());
+      }
     } catch (error) {
       console.error('Error during logout:', error);
     }

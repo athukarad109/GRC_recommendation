@@ -46,10 +46,10 @@ export async function POST(req: Request) {
       
       // Generate JWT token
       const token = generateToken({ id: result.id, email: result.email, name: result.name });
-      
+
       // Set auth cookie
       await setAuthCookie(token);
-      
+
       return NextResponse.json({ success: true, orgId: result.id });
     } catch (error) {
       console.error('Database error:', error);
@@ -60,6 +60,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Server error' }, { status: 500 });
   }
 }
+
 
 
 
