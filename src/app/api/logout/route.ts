@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
-import { removeAuthCookie } from "@utils/auth";
 
 export async function POST() {
-  removeAuthCookie();
-  return NextResponse.json({ success: true });
+  const response = NextResponse.json({ success: true });
+  response.headers.set(
+    'Set-Cookie',
+    'auth_token=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0;'
+  );
+  return response;
 }
