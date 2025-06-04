@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ChecklistItem } from '../../types/controls';
 
 export default function ChecklistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([]);
-  const [checklist, setChecklist] = useState<string[]>([]);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const router = useRouter();
 
   useEffect(() => {
@@ -63,6 +64,15 @@ export default function ChecklistPage() {
     }
   };
 
+  // Group controls by category
+  const groupedControls = checklist.reduce((acc, control) => {
+    if (!acc[control.category]) {
+      acc[control.category] = [];
+    }
+    acc[control.category].push(control);
+    return acc;
+  }, {} as Record<string, ChecklistItem[]>);
+
   if (loading) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-white">
@@ -108,18 +118,58 @@ export default function ChecklistPage() {
           {error ? (
             <p className="text-red-600">{error}</p>
           ) : (
-            <div className="bg-gray-50 rounded-lg p-6">
-              <ul className="space-y-3">
-                {checklist.map((item, index) => (
-                  <li key={index} className="flex items-start">
-                    <input
-                      type="checkbox"
-                      className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-                    />
-                    <span className="ml-2 text-gray-800">{item}</span>
-                  </li>
-                ))}
-              </ul>
+            <div className="space-y-6">
+              {Object.entries(groupedControls).map(([category, controls]) => (
+                <div key={category} className="bg-white rounded-lg border">
+                  <h3 className="text-lg font-semibold p-4 bg-gray-50 border-b">
+                    {category}
+                  </h3>
+                  <div className="divide-y">
+                    {controls.map((control) => (
+                      <div key={control.id} className="p-4">
+                        <div className="flex items-start">
+                          <input
+                            type="checkbox"
+                            id={control.id}
+                            className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                          />
+                          <div className="ml-3">
+                            <label htmlFor={control.id} className="font-medium text-gray-900">
+                              {control.text}
+                            </label>
+                            {control.description && (
+                              <p className="mt-1 text-sm text-gray-500">
+                                {control.description}
+                              </p>
+                            )}
+                            <div className="mt-2 flex flex-wrap gap-2">
+                              {control.frameworks.map((framework) => (
+                                <span
+                                  key={framework}
+                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {framework}
+                                </span>
+                              ))}
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  control.priority === 'high'
+                                    ? 'bg-red-100 text-red-800'
+                                    : control.priority === 'medium'
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-green-100 text-green-800'
+                                }`}
+                              >
+                                {control.priority} priority
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
