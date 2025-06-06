@@ -1,5 +1,7 @@
 export interface OrgFormData {
-  sector: string;
+  name: string;
+  email: string;
+  sector: string[];
   locations: string[];
   customerLocations: string[];
   dataTypes: string[];
@@ -7,4 +9,12 @@ export interface OrgFormData {
   customerType: string;
   orgSize: string;
   revenue: string;
+}
+
+export interface SignupFormData extends OrgFormData {
+  password: string;
+  recommendations: {
+    required: string[];
+    recommended: string[];
+  };
 } 

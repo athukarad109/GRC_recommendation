@@ -1,51 +1,45 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ChecklistItem } from '../../types/controls';
+import ReactMarkdown from 'react-markdown';
 
 export default function ChecklistPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
+  const [expanded, setExpanded] = useState<{ [id: string]: boolean }>({});
   const router = useRouter();
 
   useEffect(() => {
-    // Get selected frameworks from localStorage
+    // Get selected frameworks and checklist data from localStorage
     const storedFrameworks = localStorage.getItem('selectedFrameworks');
-    if (!storedFrameworks) {
+    const storedChecklist = localStorage.getItem('checklistData');
+    
+    if (!storedFrameworks || !storedChecklist) {
       router.replace('/recommendations');
       return;
     }
 
-    const frameworks = JSON.parse(storedFrameworks);
-    setSelectedFrameworks(frameworks);
-
-    // Fetch the checklist
-    async function fetchChecklist() {
-      try {
-        const response = await fetch('/api/custom-checklist', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ frameworks }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to fetch checklist');
-        }
-
-        const data = await response.json();
-        setChecklist(data.checklist);
-        setLoading(false);
-      } catch (error) {
-        setError('Failed to load checklist. Please try again.');
-        setLoading(false);
-      }
+    try {
+      const frameworks = JSON.parse(storedFrameworks);
+      const checklistData = JSON.parse(storedChecklist);
+      
+      setSelectedFrameworks(frameworks);
+      setChecklist(checklistData);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error loading stored data:', error);
+      setError('Failed to load checklist data. Please try again.');
+      setLoading(false);
     }
-
-    fetchChecklist();
   }, [router]);
+
+  const handleToggle = (id: string) => {
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const handleLogout = async () => {
     try {
@@ -55,6 +49,7 @@ export default function ChecklistPage() {
       });
       if (response.ok) {
         localStorage.removeItem('selectedFrameworks');
+        localStorage.removeItem('checklistData');
         window.location.href = '/';
       } else {
         console.error('Logout failed:', await response.text());
@@ -120,7 +115,7 @@ export default function ChecklistPage() {
           ) : (
             <div className="space-y-6">
               {Object.entries(groupedControls).map(([category, controls]) => (
-                <div key={category} className="bg-white rounded-lg border">
+                <div key={category} className="bg-white rounded-lg border shadow-sm mb-6">
                   <h3 className="text-lg font-semibold p-4 bg-gray-50 border-b">
                     {category}
                   </h3>
@@ -133,15 +128,30 @@ export default function ChecklistPage() {
                             id={control.id}
                             className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                           />
-                          <div className="ml-3">
-                            <label htmlFor={control.id} className="font-medium text-gray-900">
+                          <div className="ml-3 w-full">
+                            <label htmlFor={control.id} className="font-medium text-gray-900 text-base">
                               {control.text}
                             </label>
-                            {control.description && (
-                              <p className="mt-1 text-sm text-gray-500">
-                                {control.description}
-                              </p>
-                            )}
+                            <div className="mt-2">
+                              {control.description && (
+                                <>
+                                  <div className="relative">
+                                    <div
+                                      className={`markdown prose max-w-none text-sm ${expanded[control.id] ? '' : 'line-clamp-3 overflow-hidden'}`}
+                                    >
+                                      <ReactMarkdown>{control.description}</ReactMarkdown>
+                                    </div>
+                                    <button
+                                      className="text-blue-600 hover:underline mt-2 text-xs font-semibold"
+                                      onClick={() => handleToggle(control.id)}
+                                      type="button"
+                                    >
+                                      {expanded[control.id] ? 'Show less' : 'Show more'}
+                                    </button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
                             <div className="mt-2 flex flex-wrap gap-2">
                               {control.frameworks.map((framework) => (
                                 <span

@@ -3,7 +3,7 @@ export interface Control {
   text: string;
   category: string;
   frameworks: string[];
-  description?: string;
+  description: string;
   priority: 'high' | 'medium' | 'low';
 }
 

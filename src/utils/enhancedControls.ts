@@ -1,4 +1,6 @@
 import { Control } from '../types/controls';
+import { NLPRequest, NLPResponse, NLPProcessingOptions } from '../types/nlp';
+import { processControlsWithAI as processWithAI, enhanceControlDescription } from '../services/nlpService';
 
 // Enhanced controls with more detailed information
 const enhancedControls: Record<string, Control[]> = {
@@ -103,6 +105,142 @@ const enhancedControls: Record<string, Control[]> = {
       description: "Implement and maintain regular backup procedures",
       priority: "high"
     }
+  ],
+  "HIPAA": [
+    {
+      id: "HIPAA-001",
+      text: "Implement access controls for PHI",
+      category: "Access Control",
+      frameworks: ["HIPAA"],
+      description: "Implement technical policies and procedures for electronic information systems that maintain electronic protected health information",
+      priority: "high"
+    },
+    {
+      id: "HIPAA-002",
+      text: "Conduct risk assessments",
+      category: "Risk Management",
+      frameworks: ["HIPAA"],
+      description: "Perform regular risk assessments to identify potential threats and vulnerabilities to PHI",
+      priority: "high"
+    },
+    {
+      id: "HIPAA-003",
+      text: "Implement audit controls",
+      category: "Audit & Monitoring",
+      frameworks: ["HIPAA"],
+      description: "Implement hardware, software, and/or procedural mechanisms to record and examine activity in information systems",
+      priority: "high"
+    },
+    {
+      id: "HIPAA-004",
+      text: "Maintain transmission security",
+      category: "Data Protection",
+      frameworks: ["HIPAA"],
+      description: "Implement technical security measures to guard against unauthorized access to PHI during transmission",
+      priority: "high"
+    }
+  ],
+  "NIST": [
+    {
+      id: "NIST-001",
+      text: "Implement identity and access management",
+      category: "Access Control",
+      frameworks: ["NIST"],
+      description: "Establish and maintain identity and access management controls for systems and data",
+      priority: "high"
+    },
+    {
+      id: "NIST-002",
+      text: "Conduct continuous monitoring",
+      category: "Audit & Monitoring",
+      frameworks: ["NIST"],
+      description: "Implement continuous monitoring capabilities to detect and respond to security events",
+      priority: "high"
+    },
+    {
+      id: "NIST-003",
+      text: "Implement data protection measures",
+      category: "Data Protection",
+      frameworks: ["NIST"],
+      description: "Protect data at rest and in transit using appropriate encryption and security controls",
+      priority: "high"
+    },
+    {
+      id: "NIST-004",
+      text: "Develop incident response procedures",
+      category: "Incident Response",
+      frameworks: ["NIST"],
+      description: "Establish and maintain incident response procedures for security events",
+      priority: "high"
+    }
+  ],
+  "DPDPA": [
+    {
+      id: "DPDPA-001",
+      text: "Implement data protection measures",
+      category: "Data Protection",
+      frameworks: ["DPDPA"],
+      description: "Implement appropriate technical and organizational measures to protect personal data",
+      priority: "high"
+    },
+    {
+      id: "DPDPA-002",
+      text: "Maintain data processing records",
+      category: "Audit & Monitoring",
+      frameworks: ["DPDPA"],
+      description: "Keep detailed records of data processing activities and maintain audit trails",
+      priority: "high"
+    },
+    {
+      id: "DPDPA-003",
+      text: "Implement data subject rights",
+      category: "Data Subject Rights",
+      frameworks: ["DPDPA"],
+      description: "Establish procedures to handle data subject requests for access, correction, and deletion",
+      priority: "high"
+    },
+    {
+      id: "DPDPA-004",
+      text: "Conduct data protection impact assessments",
+      category: "Risk Management",
+      frameworks: ["DPDPA"],
+      description: "Perform assessments for high-risk data processing activities",
+      priority: "high"
+    }
+  ],
+  "MODPA": [
+    {
+      id: "MODPA-001",
+      text: "Implement data minimization",
+      category: "Data Protection",
+      frameworks: ["MODPA"],
+      description: "Collect and process only necessary personal data for specified purposes",
+      priority: "high"
+    },
+    {
+      id: "MODPA-002",
+      text: "Maintain data processing records",
+      category: "Audit & Monitoring",
+      frameworks: ["MODPA"],
+      description: "Keep detailed records of data processing activities and maintain audit trails",
+      priority: "high"
+    },
+    {
+      id: "MODPA-003",
+      text: "Implement data subject rights",
+      category: "Data Subject Rights",
+      frameworks: ["MODPA"],
+      description: "Establish procedures to handle data subject requests for access, correction, and deletion",
+      priority: "high"
+    },
+    {
+      id: "MODPA-004",
+      text: "Conduct privacy impact assessments",
+      category: "Risk Management",
+      frameworks: ["MODPA"],
+      description: "Perform assessments for high-risk data processing activities",
+      priority: "high"
+    }
   ]
 };
 
@@ -133,30 +271,88 @@ function calculateSimilarity(str1: string, str2: string): number {
   return 1 - (track[str2.length][str1.length] / maxLength);
 }
 
-// Function to deduplicate controls using NLP
-export function deduplicateControls(frameworks: string[]): Control[] {
-  const allControls: Control[] = [];
-  
+// Function to process controls through AI
+async function processControls(controls: Control[]): Promise<Control[]> {
+  if (!controls || controls.length === 0) {
+    return [];
+  }
+
+  try {
+    const options: NLPProcessingOptions = {
+      similarityThreshold: 0.8,
+      mergeStrategy: 'strict',
+      preserveFrameworks: true
+    };
+
+    // Process controls with AI
+    const processedControls = await processWithAI(controls, options);
+
+    if (!processedControls || !Array.isArray(processedControls)) {
+      console.warn('AI processing returned invalid result, falling back to local deduplication');
+      return deduplicateControls(controls);
+    }
+
+    // Enhance descriptions for each control
+    const enhancedControls = await Promise.all(
+      processedControls.map(async (control) => {
+        try {
+          const enhancedDescription = await enhanceControlDescription(control);
+          return {
+            ...control,
+            description: enhancedDescription || control.description
+          };
+        } catch (error) {
+          console.warn(`Failed to enhance description for control ${control.id}, using original description`);
+          return control;
+        }
+      })
+    );
+
+    return enhancedControls;
+  } catch (error) {
+    console.error('Error processing controls with AI:', error);
+    // Fallback to local deduplication if AI processing fails
+    return deduplicateControls(controls);
+  }
+}
+
+// Function to get controls for selected frameworks
+export async function getControlsForFrameworks(frameworks: string[]): Promise<Control[]> {
+  if (!frameworks || !Array.isArray(frameworks) || frameworks.length === 0) {
+    return [];
+  }
+
   // Collect all controls from selected frameworks
-  frameworks.forEach(framework => {
+  const allControls: Control[] = [];
+  frameworks.forEach((framework: string) => {
     if (enhancedControls[framework]) {
       allControls.push(...enhancedControls[framework]);
     }
   });
 
+  if (allControls.length === 0) {
+    return [];
+  }
+
+  // Process controls through AI
+  return processControls(allControls);
+}
+
+// Keep the existing deduplicateControls function as a fallback
+function deduplicateControls(controls: Control[]): Control[] {
   const uniqueControls: Control[] = [];
   const processedIds = new Set<string>();
 
   // Sort controls by priority (high to low)
-  allControls.sort((a, b) => {
+  controls.sort((a, b) => {
     const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
     return priorityOrder[a.priority] - priorityOrder[b.priority];
   });
 
-  for (const control of allControls) {
+  for (const control of controls) {
     if (processedIds.has(control.id)) continue;
 
-    const similarControls = allControls.filter(other => {
+    const similarControls = controls.filter(other => {
       if (other.id === control.id) return false;
       if (processedIds.has(other.id)) return false;
       
@@ -186,9 +382,4 @@ export function deduplicateControls(frameworks: string[]): Control[] {
   }
 
   return uniqueControls;
-}
-
-// Function to get controls for selected frameworks
-export function getControlsForFrameworks(frameworks: string[]): Control[] {
-  return deduplicateControls(frameworks);
 }

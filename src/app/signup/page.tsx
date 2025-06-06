@@ -21,7 +21,7 @@ export default function FormPage() {
     locations: [] as string[],
     customerLocations: [] as string[],
     dataTypes: [] as string[],
-    infra: [] as string[],
+    infrastructure: [] as string[],
     customerType: '',
     orgSize: '',
     revenue: '',
@@ -238,18 +238,18 @@ export default function FormPage() {
               </div>
             </div>
 
-            {/* Infra */}
+            {/* Infrastructure */}
             <div className="bg-gray-50 p-4 rounded-lg">
               <label className="font-semibold block mb-2">Infrastructure:</label>
               <div className="grid grid-cols-2 gap-2">
-                {infraOptions.map(i => (
-                  <label key={i} className="flex items-center">
+                {infraOptions.map(infra => (
+                  <label key={infra} className="flex items-center">
                     <input
                       type="checkbox"
                       className="mr-2"
-                      onChange={() => handleCheckbox('infra', i)}
-                      checked={formData.infra.includes(i)}
-                    /> {i}
+                      onChange={() => handleCheckbox('infrastructure', infra)}
+                      checked={formData.infrastructure.includes(infra)}
+                    /> {infra}
                   </label>
                 ))}
               </div>

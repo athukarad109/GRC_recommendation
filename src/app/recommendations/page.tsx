@@ -58,24 +58,35 @@ export default function RecommendationsPage() {
     }
 
     try {
+      // Show loading state
+      setLoading(true);
+
       const response = await fetch('/api/custom-checklist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ frameworks: selectedFws }),
       });
       
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to generate checklist');
+        throw new Error(data.error || 'Failed to generate checklist');
       }
 
-      // Store the selected frameworks in localStorage for the checklist page
+      if (!data.checklist || !Array.isArray(data.checklist)) {
+        throw new Error('Invalid checklist data received');
+      }
+      
+      // Store both the selected frameworks and the checklist data
       localStorage.setItem('selectedFrameworks', JSON.stringify(selectedFws));
+      localStorage.setItem('checklistData', JSON.stringify(data.checklist));
       
       // Navigate to the checklist page
       router.push('/checklist');
     } catch (err) {
       console.error('Failed to generate checklist:', err);
-      alert('Failed to generate checklist. Please try again.');
+      setLoading(false);
+      alert(err instanceof Error ? err.message : 'Failed to generate checklist. Please try again.');
     }
   };
 

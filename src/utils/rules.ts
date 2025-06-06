@@ -19,7 +19,7 @@ export function recommendFrameworks(data: OrgFormData) {
     if (data.locations.includes("Maryland")) {
         required.push("MODPA");
     }
-    if (data.customerType === "B2B" && !data.infra.includes("On-prem")) {
+    if (data.customerType === "B2B" && !data.infrastructure?.includes("On-prem")) {
         recommended.push("SOC 2");
     }
     if (data.sector.includes("Healthcare") || data.sector.includes("Fintech")) {
