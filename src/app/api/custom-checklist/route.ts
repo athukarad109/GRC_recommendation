@@ -26,6 +26,7 @@ export async function POST(req: Request) {
       checklist: controls.map((control): ChecklistItem => ({
         id: control.id,
         text: control.text,
+        name: control.name,
         category: control.category,
         frameworks: control.frameworks,
         description: control.description,

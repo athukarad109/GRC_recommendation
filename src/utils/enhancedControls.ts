@@ -1,6 +1,10 @@
 import { Control } from '../types/controls';
 import { NLPRequest, NLPResponse, NLPProcessingOptions } from '../types/nlp';
-import { processControlsWithAI as processWithAI, enhanceControlDescription } from '../services/nlpService';
+import { 
+  processControlsWithOllama,
+  generateControlDescriptionWithOllama,
+  generateImplementationStepsWithOllama
+} from '../services/nlpService';
 
 // Enhanced controls with more detailed information
 const enhancedControls: Record<string, Control[]> = {
@@ -8,6 +12,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "GDPR-001",
       text: "Implement data encryption",
+      name: "Data Encryption Implementation",
       category: "Data Protection",
       frameworks: ["GDPR"],
       description: "Implement appropriate technical measures to ensure data security, including encryption of personal data",
@@ -16,6 +21,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "GDPR-002",
       text: "Maintain audit logs",
+      name: "Audit Log Management",
       category: "Audit & Monitoring",
       frameworks: ["GDPR"],
       description: "Keep detailed records of data processing activities and maintain audit trails",
@@ -24,6 +30,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "GDPR-003",
       text: "Appoint a Data Protection Officer",
+      name: "Data Protection Officer Appointment",
       category: "Governance",
       frameworks: ["GDPR"],
       description: "Designate a Data Protection Officer to oversee compliance with GDPR requirements",
@@ -32,6 +39,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "GDPR-004",
       text: "Provide data access & deletion rights",
+      name: "Data Subject Rights Management",
       category: "Data Subject Rights",
       frameworks: ["GDPR"],
       description: "Implement processes to handle data subject requests for access and deletion",
@@ -42,6 +50,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "PCI-001",
       text: "Encrypt transmission of cardholder data",
+      name: "Cardholder Data Encryption",
       category: "Data Protection",
       frameworks: ["PCI DSS"],
       description: "Use strong cryptography and security protocols to protect cardholder data during transmission",
@@ -50,6 +59,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "PCI-002",
       text: "Maintain audit logs",
+      name: "Audit Log Management",
       category: "Audit & Monitoring",
       frameworks: ["PCI DSS"],
       description: "Log and monitor all access to network resources and cardholder data",
@@ -58,6 +68,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "PCI-003",
       text: "Implement access control policies",
+      name: "Access Control Policy Implementation",
       category: "Access Control",
       frameworks: ["PCI DSS"],
       description: "Restrict access to cardholder data on a need-to-know basis",
@@ -66,6 +77,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "PCI-004",
       text: "Monitor system access",
+      name: "System Access Monitoring",
       category: "Audit & Monitoring",
       frameworks: ["PCI DSS"],
       description: "Track and monitor all access to network resources and cardholder data",
@@ -76,6 +88,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "ISO-001",
       text: "Conduct regular security assessments",
+      name: "Security Assessment Program",
       category: "Risk Management",
       frameworks: ["ISO 27001"],
       description: "Perform periodic security assessments and vulnerability scans",
@@ -84,6 +97,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "ISO-002",
       text: "Implement access control policies",
+      name: "Access Control Policy Implementation",
       category: "Access Control",
       frameworks: ["ISO 27001"],
       description: "Establish and maintain access control policies and procedures",
@@ -92,6 +106,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "ISO-003",
       text: "Train employees on security practices",
+      name: "Security Awareness Training",
       category: "Training & Awareness",
       frameworks: ["ISO 27001"],
       description: "Provide regular security awareness training to all employees",
@@ -100,6 +115,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "ISO-004",
       text: "Perform regular backups",
+      name: "Backup Management",
       category: "Data Protection",
       frameworks: ["ISO 27001"],
       description: "Implement and maintain regular backup procedures",
@@ -110,6 +126,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "HIPAA-001",
       text: "Implement access controls for PHI",
+      name: "PHI Access Control Implementation",
       category: "Access Control",
       frameworks: ["HIPAA"],
       description: "Implement technical policies and procedures for electronic information systems that maintain electronic protected health information",
@@ -118,6 +135,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "HIPAA-002",
       text: "Conduct risk assessments",
+      name: "Risk Assessment Program",
       category: "Risk Management",
       frameworks: ["HIPAA"],
       description: "Perform regular risk assessments to identify potential threats and vulnerabilities to PHI",
@@ -126,6 +144,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "HIPAA-003",
       text: "Implement audit controls",
+      name: "Audit Control Implementation",
       category: "Audit & Monitoring",
       frameworks: ["HIPAA"],
       description: "Implement hardware, software, and/or procedural mechanisms to record and examine activity in information systems",
@@ -134,6 +153,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "HIPAA-004",
       text: "Maintain transmission security",
+      name: "Transmission Security Management",
       category: "Data Protection",
       frameworks: ["HIPAA"],
       description: "Implement technical security measures to guard against unauthorized access to PHI during transmission",
@@ -144,6 +164,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "NIST-001",
       text: "Implement identity and access management",
+      name: "Identity and Access Management",
       category: "Access Control",
       frameworks: ["NIST"],
       description: "Establish and maintain identity and access management controls for systems and data",
@@ -152,6 +173,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "NIST-002",
       text: "Conduct continuous monitoring",
+      name: "Continuous Monitoring Program",
       category: "Audit & Monitoring",
       frameworks: ["NIST"],
       description: "Implement continuous monitoring capabilities to detect and respond to security events",
@@ -160,6 +182,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "NIST-003",
       text: "Implement data protection measures",
+      name: "Data Protection Implementation",
       category: "Data Protection",
       frameworks: ["NIST"],
       description: "Protect data at rest and in transit using appropriate encryption and security controls",
@@ -168,6 +191,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "NIST-004",
       text: "Develop incident response procedures",
+      name: "Incident Response Development",
       category: "Incident Response",
       frameworks: ["NIST"],
       description: "Establish and maintain incident response procedures for security events",
@@ -178,6 +202,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "DPDPA-001",
       text: "Implement data protection measures",
+      name: "Data Protection Implementation",
       category: "Data Protection",
       frameworks: ["DPDPA"],
       description: "Implement appropriate technical and organizational measures to protect personal data",
@@ -186,6 +211,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "DPDPA-002",
       text: "Maintain data processing records",
+      name: "Data Processing Records Management",
       category: "Audit & Monitoring",
       frameworks: ["DPDPA"],
       description: "Keep detailed records of data processing activities and maintain audit trails",
@@ -194,6 +220,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "DPDPA-003",
       text: "Implement data subject rights",
+      name: "Data Subject Rights Implementation",
       category: "Data Subject Rights",
       frameworks: ["DPDPA"],
       description: "Establish procedures to handle data subject requests for access, correction, and deletion",
@@ -202,6 +229,7 @@ const enhancedControls: Record<string, Control[]> = {
     {
       id: "DPDPA-004",
       text: "Conduct data protection impact assessments",
+      name: "Data Protection Impact Assessment",
       category: "Risk Management",
       frameworks: ["DPDPA"],
       description: "Perform assessments for high-risk data processing activities",
@@ -211,7 +239,8 @@ const enhancedControls: Record<string, Control[]> = {
   "MODPA": [
     {
       id: "MODPA-001",
-      text: "Implement data minimization",
+      text: "Limit data collection to what is necessary",
+      name: "Data Minimization Implementation",
       category: "Data Protection",
       frameworks: ["MODPA"],
       description: "Collect and process only necessary personal data for specified purposes",
@@ -219,15 +248,17 @@ const enhancedControls: Record<string, Control[]> = {
     },
     {
       id: "MODPA-002",
-      text: "Maintain data processing records",
-      category: "Audit & Monitoring",
+      text: "Implement strong encryption for personal data",
+      name: "Personal Data Encryption",
+      category: "Data Protection",
       frameworks: ["MODPA"],
       description: "Keep detailed records of data processing activities and maintain audit trails",
       priority: "high"
     },
     {
       id: "MODPA-003",
-      text: "Implement data subject rights",
+      text: "Allow consumers to opt-out of data sales",
+      name: "Data Sales Opt-out Management",
       category: "Data Subject Rights",
       frameworks: ["MODPA"],
       description: "Establish procedures to handle data subject requests for access, correction, and deletion",
@@ -235,7 +266,8 @@ const enhancedControls: Record<string, Control[]> = {
     },
     {
       id: "MODPA-004",
-      text: "Conduct privacy impact assessments",
+      text: "Publish a clear privacy policy",
+      name: "Privacy Policy Publication",
       category: "Risk Management",
       frameworks: ["MODPA"],
       description: "Perform assessments for high-risk data processing activities",
@@ -284,25 +316,28 @@ async function processControls(controls: Control[]): Promise<Control[]> {
       preserveFrameworks: true
     };
 
-    // Process controls with AI
-    const processedControls = await processWithAI(controls, options);
+    // Process controls with Ollama
+    const processedControls = await processControlsWithOllama(controls, options);
 
     if (!processedControls || !Array.isArray(processedControls)) {
-      console.warn('AI processing returned invalid result, falling back to local deduplication');
+      console.warn('Ollama processing returned invalid result, falling back to local deduplication');
       return deduplicateControls(controls);
     }
 
-    // Enhance descriptions for each control
+    // Enhance descriptions and generate implementation steps for each control
     const enhancedControls = await Promise.all(
       processedControls.map(async (control) => {
         try {
-          const enhancedDescription = await enhanceControlDescription(control);
+          const enhancedDescription = await generateControlDescriptionWithOllama(control, options);
+          const implementationSteps = await generateImplementationStepsWithOllama(control, options);
+
           return {
             ...control,
-            description: enhancedDescription || control.description
+            description: enhancedDescription || control.description,
+            implementationSteps: implementationSteps
           };
         } catch (error) {
-          console.warn(`Failed to enhance description for control ${control.id}, using original description`);
+          console.warn(`Failed to enhance control ${control.id}, using original description`);
           return control;
         }
       })
@@ -310,8 +345,8 @@ async function processControls(controls: Control[]): Promise<Control[]> {
 
     return enhancedControls;
   } catch (error) {
-    console.error('Error processing controls with AI:', error);
-    // Fallback to local deduplication if AI processing fails
+    console.error('Error processing controls with Ollama:', error);
+    // Fallback to local deduplication if Ollama processing fails
     return deduplicateControls(controls);
   }
 }
