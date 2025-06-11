@@ -1,5 +1,11 @@
 import { Control } from '../types/controls';
 import { NLPProcessingOptions } from '../types/nlp';
+import { Ollama } from 'ollama';
+
+// Initialize Ollama client
+const ollama = new Ollama({
+  host: 'http://localhost:11434'
+});
 
 // Function to make Ollama API request
 async function makeOllamaRequest(prompt: string, options: {
@@ -9,62 +15,30 @@ async function makeOllamaRequest(prompt: string, options: {
   top_k?: number;
   top_p?: number;
 } = {}) {
-  const controller = new AbortController();
-  const timeout = 30000; // 30 seconds timeout
-  const timeoutId = setTimeout(() => controller.abort(), timeout);
-
   try {
     console.log('Making request to Ollama with prompt:', prompt.substring(0, 100) + '...');
     
-    const requestBody = {
-      model: options.model || 'llama2:7b',
+    const response = await ollama.generate({
+      model: options.model || 'llama2',
       prompt: prompt,
       stream: false,
-      num_predict: options.num_predict || 100,
-      temperature: options.temperature || 0.7,
-      top_k: options.top_k || 40,
-      top_p: options.top_p || 0.9
-    };
-    
-    console.log('Request body:', JSON.stringify(requestBody, null, 2));
-
-    const response = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal
+      options: {
+        num_predict: options.num_predict || 500,
+        temperature: options.temperature || 0.7,
+        top_k: options.top_k || 40,
+        top_p: options.top_p || 0.9
+      }
     });
 
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Ollama API error response:', {
-        status: response.status,
-        statusText: response.statusText,
-        errorText: errorText
-      });
-      throw new Error(`Ollama API error: ${response.statusText}. Details: ${errorText}`);
-    }
-
-    const data = await response.json();
     console.log('Successfully received response from Ollama');
-    return data.response;
+    return response.response;
   } catch (error) {
-    clearTimeout(timeoutId);
+    console.error('Error in Ollama request:', error);
     if (error instanceof Error) {
-      if (error.name === 'AbortError') {
-        console.error('Ollama request timed out after', timeout, 'ms');
-        throw new Error('Ollama request timed out. Please check if Ollama is running and try again.');
-      }
-      if (error.message.includes('fetch')) {
-        console.error('Failed to connect to Ollama. Please ensure Ollama is running at http://localhost:11434');
-        throw new Error('Cannot connect to Ollama. Please start Ollama and try again.');
+      if (error.message.includes('ECONNREFUSED')) {
+        throw new Error('Cannot connect to Ollama. Please ensure Ollama is running at http://localhost:11434');
       }
     }
-    console.error('Error in Ollama request:', error);
     throw error;
   }
 }
@@ -75,24 +49,22 @@ export async function processControlsWithOllama(
   options: NLPProcessingOptions
 ): Promise<Control[]> {
   try {
-    const prompt = `You are a security and compliance expert. Your task is to analyze and deduplicate security controls while preserving their essential requirements and framework-specific details.
+    const prompt = `You are a security and compliance expert specializing in control analysis and optimization. Your task is to analyze and deduplicate security controls while preserving their essential requirements and framework-specific details.
 
-    Analyze and deduplicate the following security and compliance controls. 
-    For each control, consider:
-    1. Semantic similarity
-    2. Framework requirements
-    3. Priority levels
-    4. Technical implementation details
-
-    Controls to analyze:
+    Analyze the following security and compliance controls:
     ${JSON.stringify(controls, null, 2)}
 
     Requirements:
-    - Similarity threshold: ${options.similarityThreshold}
-    - Merge strategy: ${options.mergeStrategy}
-    - Preserve frameworks: ${options.preserveFrameworks}
+    1. Identify and merge similar controls based on:
+       - Core security requirements
+       - Technical implementation details
+       - Framework-specific requirements
+       - Priority levels
+    2. Similarity threshold: ${options.similarityThreshold}
+    3. Merge strategy: ${options.mergeStrategy}
+    4. Preserve frameworks: ${options.preserveFrameworks}
 
-    IMPORTANT: You must respond with a valid JSON object in the following format:
+    Return a JSON object in this exact format:
     {
       "processedControls": [
         {
@@ -107,13 +79,20 @@ export async function processControlsWithOllama(
       ]
     }
 
-    Do not include any other text or explanation, only the JSON object.`;
+    Focus on:
+    - Maintaining technical accuracy
+    - Preserving framework compliance
+    - Ensuring clear, actionable controls
+    - Eliminating redundancy while keeping essential requirements
 
-    const data = await makeOllamaRequest(prompt);
-    const responseText = data.response || '{}';
+    Return ONLY the JSON object, no additional text.`;
+
+    const responseText = await makeOllamaRequest(prompt, {
+      num_predict: 1000,
+      temperature: 0.7
+    });
     
     try {
-      // Try to find JSON in the response text
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
       const parsedResponse = JSON.parse(jsonStr);
@@ -141,9 +120,7 @@ export async function generateControlDescriptionWithOllama(
   options: NLPProcessingOptions
 ): Promise<string> {
   try {
-    const prompt = `You are a security control expert. Your task is to generate a detailed description for a security control.
-
-    Generate a detailed description for the following security control:
+    const prompt = `You are a security control expert. Generate a detailed, technical description for this security control:
 
     Control ID: ${control.id}
     Name: ${control.name}
@@ -152,38 +129,21 @@ export async function generateControlDescriptionWithOllama(
     Priority: ${control.priority}
 
     Requirements:
-    - Be specific and actionable
-    - Include technical details
-    - Reference relevant security standards
-    - Keep it concise but comprehensive
+    1. Be specific and technically precise
+    2. Include implementation considerations
+    3. Reference relevant security standards
+    4. Address compliance requirements
+    5. Include risk context
+    6. Keep it concise but comprehensive
 
-    IMPORTANT: Return only the description text, no additional formatting, JSON, or explanation.`;
+    Return ONLY the description text, no additional formatting or explanation.`;
 
-    console.log('Attempting to connect to Ollama at http://localhost:11434...');
-    const ollamaResponse = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama2:7b',
-        prompt: prompt,
-        stream: false,
-      }),
+    const response = await makeOllamaRequest(prompt, {
+      num_predict: 500,
+      temperature: 0.7
     });
-
-    if (!ollamaResponse.ok) {
-      const errorText = await ollamaResponse.text();
-      console.error('Ollama API request failed with status:', ollamaResponse.status);
-      console.error('Error details:', errorText);
-      throw new Error(`Ollama API request failed: ${ollamaResponse.status} ${errorText}`);
-    }
-
-    const data = await ollamaResponse.json();
-    return data.response?.trim() || control.description || '';
+    return response.trim() || control.description || '';
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error('Failed to connect to Ollama. Please ensure Ollama is running at http://localhost:11434');
-      throw new Error('Ollama is not running. Please start Ollama and try again.');
-    }
     console.error('Error generating control description with Ollama:', error);
     throw error;
   }
@@ -195,9 +155,7 @@ export async function generateImplementationStepsWithOllama(
   options: NLPProcessingOptions
 ): Promise<string[]> {
   try {
-    const prompt = `You are a security control expert. Your task is to generate implementation steps for a security control.
-
-    Generate detailed implementation steps for the following security control:
+    const prompt = `You are a security control implementation expert. Generate detailed implementation steps for this security control:
 
     Control ID: ${control.id}
     Name: ${control.name}
@@ -206,64 +164,77 @@ export async function generateImplementationStepsWithOllama(
     Priority: ${control.priority}
 
     Requirements:
-    - Provide clear, actionable steps
-    - Include technical details
-    - Consider dependencies
-    - Include verification steps
-    - Keep steps concise but complete
+    1. Provide clear, actionable steps
+    2. Include technical details and configurations
+    3. Consider dependencies and prerequisites
+    4. Include verification and testing steps
+    5. Address potential challenges
+    6. Include monitoring and maintenance steps
 
-    IMPORTANT: You must respond with a valid JSON array of strings in the following format:
+    Return a JSON array of strings in this exact format:
     [
-      "Step 1 description",
-      "Step 2 description",
-      "Step 3 description"
+      "Step 1: Detailed description",
+      "Step 2: Detailed description",
+      "Step 3: Detailed description"
     ]
 
-    Do not include any other text or explanation, only the JSON array.`;
+    Return ONLY the JSON array, no additional text.`;
 
-    console.log('Attempting to connect to Ollama at http://localhost:11434...');
-    const ollamaResponse = await fetch('http://localhost:11434/api/generate', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'llama2:7b',
-        prompt: prompt,
-        stream: false,
-      }),
+    const responseText = await makeOllamaRequest(prompt, {
+      num_predict: 800,
+      temperature: 0.7
     });
-
-    if (!ollamaResponse.ok) {
-      const errorText = await ollamaResponse.text();
-      console.error('Ollama API request failed with status:', ollamaResponse.status);
-      console.error('Error details:', errorText);
-      throw new Error(`Ollama API request failed: ${ollamaResponse.status} ${errorText}`);
-    }
-
-    const data = await ollamaResponse.json();
-    const responseText = data.response || '[]';
     
     try {
-      // Try to find JSON array in the response text
-      const jsonMatch = responseText.match(/\[[\s\S]*\]/);
-      const jsonStr = jsonMatch ? jsonMatch[0] : responseText;
-      const steps = JSON.parse(jsonStr);
+      // Find all JSON arrays in the response
+      const jsonArrays = responseText.match(/\[[\s\S]*?\]/g) || [];
       
-      if (!Array.isArray(steps)) {
-        console.warn('Invalid response format from Ollama, returning empty array');
-        return [];
+      // Try to parse each array and combine valid steps
+      const allSteps: string[] = [];
+      
+      for (const jsonStr of jsonArrays) {
+        try {
+          const steps = JSON.parse(jsonStr);
+          if (Array.isArray(steps)) {
+            allSteps.push(...steps);
+          }
+        } catch (e) {
+          // Skip invalid JSON arrays
+          continue;
+        }
+      }
+
+      if (allSteps.length > 0) {
+        // Remove duplicates and sort by step number
+        const uniqueSteps = Array.from(new Set(allSteps))
+          .sort((a, b) => {
+            const numA = parseInt(a.match(/Step (\d+)/)?.[1] || '0');
+            const numB = parseInt(b.match(/Step (\d+)/)?.[1] || '0');
+            return numA - numB;
+          });
+        return uniqueSteps;
+      }
+
+      // If no valid JSON arrays found, try to extract from plain text
+      const plainSteps = responseText.split('\n')
+        .map(line => line.trim())
+        .filter(line => line.startsWith('Step') && line.includes(':'))
+        .map(line => {
+          const [stepNum, ...rest] = line.split(':');
+          return `Step ${stepNum.replace('Step', '').trim()}: ${rest.join(':').trim()}`;
+        });
+
+      if (plainSteps.length > 0) {
+        return plainSteps;
       }
       
-      return steps;
+      return [];
     } catch (parseError) {
-      console.error('Failed to parse Ollama response as JSON:', parseError);
+      console.error('Failed to parse Ollama response:', parseError);
       console.error('Raw response:', responseText);
       return [];
     }
   } catch (error) {
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      console.error('Failed to connect to Ollama. Please ensure Ollama is running at http://localhost:11434');
-      throw new Error('Ollama is not running. Please start Ollama and try again.');
-    }
     console.error('Error generating implementation steps with Ollama:', error);
     throw error;
   }

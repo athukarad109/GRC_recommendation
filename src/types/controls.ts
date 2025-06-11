@@ -6,6 +6,7 @@ export interface Control {
   frameworks: string[];
   description: string;
   priority: 'high' | 'medium' | 'low';
+  implementationSteps?: string[];
 }
 
 export interface ChecklistItem {
@@ -16,4 +17,5 @@ export interface ChecklistItem {
   frameworks: string[];
   description?: string;
   priority: 'high' | 'medium' | 'low';
+  implementationSteps?: string[];
 } 

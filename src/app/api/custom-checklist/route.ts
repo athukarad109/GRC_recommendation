@@ -30,7 +30,8 @@ export async function POST(req: Request) {
         category: control.category,
         frameworks: control.frameworks,
         description: control.description,
-        priority: control.priority
+        priority: control.priority,
+        implementationSteps: control.implementationSteps
       }))
     });
   } catch (error) {

@@ -19,6 +19,7 @@
     "grc_recommandation_automation": "file:",
     "jsonwebtoken": "^9.0.2",
     "next": "15.3.2",
+    "ollama": "^0.5.16",
     "openai": "^4.104.0",
     "pg": "^8.16.0",
     "react": "^19.0.0",

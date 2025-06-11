@@ -10,7 +10,7 @@ export default function ChecklistPage() {
   const [error, setError] = useState('');
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>([]);
   const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
-  const [expanded, setExpanded] = useState<{ [id: string]: boolean }>({});
+  const [expanded, setExpanded] = useState<{ [id: string]: { description: boolean; steps: boolean } }>({});
   const router = useRouter();
 
   useEffect(() => {
@@ -37,8 +37,14 @@ export default function ChecklistPage() {
     }
   }, [router]);
 
-  const handleToggle = (id: string) => {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const handleToggle = (id: string, type: 'description' | 'steps') => {
+    setExpanded(prev => ({
+      ...prev,
+      [id]: {
+        ...prev[id],
+        [type]: !prev[id]?.[type]
+      }
+    }));
   };
 
   const handleLogout = async () => {
@@ -81,7 +87,7 @@ export default function ChecklistPage() {
       {/* Top navigation bar */}
       <div className="w-full p-4 flex justify-between border-b">
         <h1 className="text-2xl font-bold">GRC Recommender</h1>
-        <button 
+        <button
           onClick={handleLogout}
           className="border border-blue-600 text-blue-600 px-6 py-2 rounded hover:bg-blue-50 transition"
         >
@@ -122,57 +128,90 @@ export default function ChecklistPage() {
                   <div className="divide-y">
                     {controls.map((control) => (
                       <div key={control.id} className="p-4">
-                        <div className="flex items-start">
+                        <div className="flex items-start space-x-4">
                           <input
                             type="checkbox"
                             id={control.id}
                             className="mt-1 h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
                           />
-                          <div className="ml-3 w-full">
-                            <label htmlFor={control.id} className="font-medium text-gray-900 text-base">
-                              {control.text}
-                            </label>
-                            <div className="mt-2">
-                              {control.description && (
-                                <>
-                                  <div className="relative">
-                                    <div
-                                      className={`markdown prose max-w-none text-sm ${expanded[control.id] ? '' : 'line-clamp-3 overflow-hidden'}`}
-                                    >
-                                      <ReactMarkdown>{control.description}</ReactMarkdown>
-                                    </div>
-                                    <button
-                                      className="text-blue-600 hover:underline mt-2 text-xs font-semibold"
-                                      onClick={() => handleToggle(control.id)}
-                                      type="button"
-                                    >
-                                      {expanded[control.id] ? 'Show less' : 'Show more'}
-                                    </button>
-                                  </div>
-                                </>
-                              )}
-                            </div>
-                            <div className="mt-2 flex flex-wrap gap-2">
-                              {control.frameworks.map((framework) => (
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between">
+                              <label htmlFor={control.id} className="font-medium text-gray-900 text-base">
+                                {control.text}
+                              </label>
+                              <div className="flex space-x-2">
+                                {control.frameworks.map((framework) => (
+                                  <span
+                                    key={framework}
+                                    className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                  >
+                                    {framework}
+                                  </span>
+                                ))}
                                 <span
-                                  key={framework}
-                                  className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800"
+                                  className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                    control.priority === 'high'
+                                      ? 'bg-red-100 text-red-800'
+                                      : control.priority === 'medium'
+                                      ? 'bg-yellow-100 text-yellow-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}
                                 >
-                                  {framework}
+                                  {control.priority} priority
                                 </span>
-                              ))}
-                              <span
-                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
-                                  control.priority === 'high'
-                                    ? 'bg-red-100 text-red-800'
-                                    : control.priority === 'medium'
-                                    ? 'bg-yellow-100 text-yellow-800'
-                                    : 'bg-green-100 text-green-800'
-                                }`}
-                              >
-                                {control.priority} priority
-                              </span>
+                              </div>
                             </div>
+
+                            {/* Description Section */}
+                            {control.description && (
+                              <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Description:</h4>
+                                <div className="relative">
+                                  <div
+                                    className={`prose prose-sm max-w-none text-gray-600 ${
+                                      expanded[control.id]?.description ? '' : 'line-clamp-3 overflow-hidden'
+                                    }`}
+                                  >
+                                    <ReactMarkdown>{control.description}</ReactMarkdown>
+                                  </div>
+                                  <button
+                                    className="text-blue-600 hover:underline mt-2 text-xs font-semibold"
+                                    onClick={() => handleToggle(control.id, 'description')}
+                                    type="button"
+                                  >
+                                    {expanded[control.id]?.description ? 'Show less' : 'Show more'}
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Implementation Steps Section */}
+                            {control.implementationSteps && control.implementationSteps.length > 0 && (
+                              <div className="mt-4 bg-gray-50 rounded-lg p-4">
+                                <h4 className="text-sm font-semibold text-gray-700 mb-2">Implementation Steps:</h4>
+                                <div
+                                  className={`space-y-2 ${
+                                    expanded[control.id]?.steps ? '' : 'max-h-24 overflow-hidden'
+                                  }`}
+                                >
+                                  {control.implementationSteps.map((step, index) => (
+                                    <div key={index} className="flex items-start space-x-2">
+                                      <span className="text-sm font-medium text-gray-500">{index + 1}.</span>
+                                      <p className="text-sm text-gray-600">{step}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                                {control.implementationSteps.length > 3 && (
+                                  <button
+                                    className="text-blue-600 hover:underline mt-2 text-xs font-semibold"
+                                    onClick={() => handleToggle(control.id, 'steps')}
+                                    type="button"
+                                  >
+                                    {expanded[control.id]?.steps ? 'Show less' : 'Show more'}
+                                  </button>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>

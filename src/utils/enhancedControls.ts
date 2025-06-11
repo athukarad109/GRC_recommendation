@@ -324,24 +324,34 @@ async function processControls(controls: Control[]): Promise<Control[]> {
       return deduplicateControls(controls);
     }
 
-    // Enhance descriptions and generate implementation steps for each control
-    const enhancedControls = await Promise.all(
-      processedControls.map(async (control) => {
-        try {
-          const enhancedDescription = await generateControlDescriptionWithOllama(control, options);
-          const implementationSteps = await generateImplementationStepsWithOllama(control, options);
+    // Process controls in batches to avoid overwhelming the API
+    const batchSize = 3;
+    const enhancedControls: Control[] = [];
 
-          return {
-            ...control,
-            description: enhancedDescription || control.description,
-            implementationSteps: implementationSteps
-          };
-        } catch (error) {
-          console.warn(`Failed to enhance control ${control.id}, using original description`);
-          return control;
-        }
-      })
-    );
+    for (let i = 0; i < processedControls.length; i += batchSize) {
+      const batch = processedControls.slice(i, i + batchSize);
+      const enhancedBatch = await Promise.all(
+        batch.map(async (control) => {
+          try {
+            // Generate description and steps in parallel
+            const [enhancedDescription, implementationSteps] = await Promise.all([
+              generateControlDescriptionWithOllama(control, options),
+              generateImplementationStepsWithOllama(control, options)
+            ]);
+
+            return {
+              ...control,
+              description: enhancedDescription || control.description,
+              implementationSteps: implementationSteps
+            };
+          } catch (error) {
+            console.warn(`Failed to enhance control ${control.id}, using original data`);
+            return control;
+          }
+        })
+      );
+      enhancedControls.push(...enhancedBatch);
+    }
 
     return enhancedControls;
   } catch (error) {
